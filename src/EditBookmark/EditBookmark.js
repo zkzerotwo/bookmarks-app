@@ -1,18 +1,32 @@
 import React, { Component } from 'react';
-import config from './config';
+import config from '../config';
+import PropTypes from 'prop-types'
+
+const Required = () => (
+    <span className='AddBookmark__required'>*</span>
+)
 
 export default class EditArticleForm extends Component {
+
+    static propTypes = {
+        match: PropTypes.shape({
+          params: PropTypes.object,
+        }),
+        history: PropTypes.shape({
+          push: PropTypes.func,
+        }).isRequired,
+      };
+
     constructor(props) {
         super(props);
         this.state = {
-            inputValues: {
-                title: '',
-                id: '',
-                url: '',
-                rating: null,
-                description: '',
-                error: false
-            }
+            error: null,
+            title: '',
+            id: '',
+            url: '',
+            rating: null,
+            description: ''
+
 
         }
     }
@@ -20,7 +34,7 @@ export default class EditArticleForm extends Component {
 
     componentDidMount() {
         const bookmarkId = this.props.match.params.bookmarkId
-        fetch(`https://localhost:8080/api/bookmarks/${bookmarkId}`, {
+        fetch(config.API_ENDPOINT + `/${bookmarkId}`, {
             method: 'GET'
         })
             .then(res => {
@@ -36,30 +50,40 @@ export default class EditArticleForm extends Component {
             .then(responseData => {
                 console.log(responseData)
                 this.setState({
-                  inputValues:   {
-                    title: responseData.title,
-                    id: responseData.id,
-                    url: responseData.url,
-                    rating: responseData.rating,
-                    description: responseData.description
-                }
+                        title: responseData.title,
+                        id: responseData.id,
+                        url: responseData.url,
+                        rating: responseData.rating,
+                        description: responseData.description
                 })
             })
             .catch(error => { this.setState({ error }) })
     }
 
+    handleChangeTitle = e => {
+        this.setState({ title: e.target.value })
+      };
+    
+      handleChangeUrl = e => {
+        this.setState({ url: e.target.value })
+      };
+    
+      handleChangeDescription = e => {
+        this.setState({ description: e.target.value })
+      };
+    
+      handleChangeRating = e => {
+        this.setState({ rating: e.target.value })
+      };
+
     handleSubmit = e => {
         e.preventDefault()
         // get the form fields from the event
-        const { title, url, description, rating } = e.target
-        const bookmark = {
-            title: title.value,
-            url: url.value,
-            description: description.value,
-            rating: rating.value,
-        }
+        const { bookmarkId } = this.props.match.params
+        const { title, url, description, rating } = this.state
+        const bookmark = { title, url, description, rating }
         this.setState({ error: null })
-        fetch(config.API_ENDPOINT, {
+        fetch(config.API_ENDPOINT + `/${bookmarkId}`, {
             method: 'PATCH',
             body: JSON.stringify(bookmark),
             headers: {
@@ -77,23 +101,31 @@ export default class EditArticleForm extends Component {
                 }
                 return res.json()
             })
-            .then(data => {
-                this.context.updateBookmark(data)
-                title.value = ''
-                url.value = ''
-                description.value = ''
-                rating.value = ''
-
-                this.props.history.push('/')
-                // this.props.onAddBookmark(data)
-            })
+            .then(() => {
+                this.resetFields(bookmark)
+                this.context.updateBookmark(bookmark)
+              })
             .catch(error => {
                 this.setState({ error })
             })
     }
+
+    resetFields = (newFields) => {
+        this.setState({
+          id: newFields.id || '',
+          title: newFields.title || '',
+          url: newFields.url || '',
+          description: newFields.description || '',
+          rating: newFields.rating || '',
+        })
+      }
+    
+      handleClickCancel = () => {
+        this.props.history.push('/')
+      };
     /* state for inputs etc... */
     render() {
-        const { title, url, rating, description } = this.state
+        const { title, url, rating, description, error } = this.state
         return (
             <section className='EditArticleForm'>
                 <h2>Edit bookmark</h2>
@@ -115,6 +147,7 @@ export default class EditArticleForm extends Component {
                             name='title'
                             id='title'
                             value={title}
+                            onChange={this.handleChangeTitle}
                             placeholder='Great website!'
                             required
                         />
@@ -130,6 +163,7 @@ export default class EditArticleForm extends Component {
                             name='url'
                             id='url'
                             value={url}
+                            onChange={this.handleChangeUrl}
                             placeholder='https://www.great-website.com/'
                             required
                         />
@@ -142,6 +176,7 @@ export default class EditArticleForm extends Component {
                             name='description'
                             id='description'
                             value={description}
+                            onChange={this.handleChangeDescription}
                         />
                     </div>
                     <div>
@@ -155,15 +190,15 @@ export default class EditArticleForm extends Component {
                             name='rating'
                             id='rating'
                             value={rating}
-                            defaultValue='1'
+                            onChange={this.handleChangeRating}
                             min='1'
                             max='5'
                             required
                         />
                     </div>
                     <div className='EditBookmark__buttons'>
-                        <button type='button' 
-                        // onClick={this.handleClickCancel}
+                        <button type='button'
+                        onClick={this.handleClickCancel}
                         >
                             Cancel
             </button>
